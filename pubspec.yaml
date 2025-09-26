@@ -1,0 +1,48 @@
+name: aivantu_app
+description: AiVantu video creator frontend (Flutter)
+publish_to: "none"
+
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # UI packages
+  cupertino_icons: ^1.0.6
+  google_fonts: ^6.1.0
+  provider: ^6.0.5
+  flutter_svg: ^2.0.9
+  lottie: ^3.0.0
+  carousel_slider: ^5.0.0
+
+  # Network / API
+  http: ^1.1.0
+  dio: ^5.4.0
+  shared_preferences: ^2.2.2
+
+  # File picker + media
+  file_picker: ^6.1.1
+  image_picker: ^1.0.7
+  video_player: ^2.8.3
+
+  # State management (optional)
+  riverpod: ^2.4.0
+
+  # Animations / Transitions
+  animations: ^2.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/icons/
+    - assets/images/
+    - assets/lottie/
