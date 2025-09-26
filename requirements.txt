@@ -1,6 +1,6 @@
-# ==========================
+# ==============================
 # AiVantu Phase-3 Production
-# ==========================
+# ==============================
 
 # Core Flask
 flask==3.0.3
@@ -9,18 +9,18 @@ werkzeug==3.0.4
 flask-limiter==3.8.0
 flask-jwt-extended==4.6.0
 flask-migrate==4.0.5
-flask-cors==5.0.0        # NEW → frontend (Flutter) ko backend se connect karne ke liye
+flask-cors==4.0.0              # NEW → Flutter frontend connect with backend
 
-# Database (SQLite for now, Postgres ready if needed)
-sqlalchemy==2.0.36
-psycopg2-binary==2.9.9    # NEW → future me agar PostgreSQL use karoge
+# Database (SQLite now, Postgres ready if needed)
+SQLAlchemy==2.0.36
+psycopg2-binary==2.9.9          # NEW → future Postgres support
 
 # Video / Audio Processing
 moviepy==1.0.3
 gTTS==2.5.1
-pillow==10.4.0
+Pillow==10.4.0
 opencv-python-headless==4.10.0.84
-pydub==0.25.1             # NEW → audio editing (silence, merge, volume control)
+pydub==0.25.1                   # NEW → audio editing (silence, merge, volume)
 
 # Payment Gateways
 razorpay==1.4.2
@@ -41,4 +41,4 @@ requests==2.32.3
 python-dotenv==1.0.1
 gunicorn==23.0.0
 setuptools==65.5.0
-loguru==0.7.2             # NEW → advanced logging (better than print/logging)
+loguru==0.7.2                   # NEW → advanced logging
