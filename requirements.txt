@@ -1,8 +1,3 @@
-# ===============================
-# AiVantu Phase-3 Production
-# ===============================
-
-# Core Flask
 flask==3.0.3
 flask_sqlalchemy==3.1.1
 werkzeug==3.0.4
@@ -11,32 +6,23 @@ flask-jwt-extended==4.6.0
 flask-migrate==4.0.5
 flask-cors==4.0.0
 
-# Database (SQLite for now, Postgres ready if needed)
 SQLAlchemy==2.0.36
-# psycopg2-binary==2.9.9     # 🚫 DISABLED (enable only if using PostgreSQL)
 
-# Video / Audio Processing
 moviepy==1.0.3
 gTTS==2.5.1
 Pillow==10.4.0
 opencv-python-headless==4.10.0.84
 pydub==0.25.1
 
-# Payment Gateways
 razorpay==1.4.2
 paypalrestsdk==1.13.1
 
-# OTP / SMS
 twilio==8.0.0
-
-# Firebase (auth + storage)
 firebase-admin==6.6.0
 
-# Redis Queue (optional for async tasks)
 redis==5.0.1
 rq==1.15.1
 
-# Utils
 requests==2.32.3
 python-dotenv==1.0.1
 gunicorn==23.0.0
