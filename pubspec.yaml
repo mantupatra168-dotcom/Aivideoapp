@@ -1,38 +1,24 @@
-name: aivantu_video_app
-description: AiVantu Phase-3 Flutter frontend
-publish_to: 'none'
+name: aivantu_frontend
+description: AiVantu production frontend (single file example)
+publish_to: "none"
 version: 1.0.0+1
 
 environment:
-  sdk: ">=3.0.0 <4.0.0"
+  sdk: ">=2.18.0 <4.0.0"
 
 dependencies:
   flutter:
     sdk: flutter
-
-  # UI
-  cupertino_icons: ^1.0.6
-  google_fonts: ^6.1.0
-
-  # State management
+  http: ^0.13.6
+  dio: ^5.2.1
   provider: ^6.0.5
-
-  # HTTP Client
-  dio: ^5.4.3+1
-
-  # File picker & uploads
-  file_picker: ^8.0.0
-  path_provider: ^2.1.2
-
-  # Video & audio
-  video_player: ^2.8.2
-  chewie: ^1.7.0
-
-  # JSON handling
-  intl: ^0.19.0
-  shared_preferences: ^2.2.2
+  image_picker: ^0.8.7+5
+  file_picker: ^5.2.2
+  path_provider: ^2.0.15
+  video_player: ^2.6.0
+  audioplayers: ^2.1.1
+  flutter_dotenv: ^5.0.2
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^3.0.0
