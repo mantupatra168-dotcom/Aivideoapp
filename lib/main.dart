@@ -12,8 +12,7 @@ void main() {
   runApp(AiVantuApp());
 }
 
-const String API_BASE = "https://your-api-base.example.com"; // <<< CHANGE to your backend
-
+const String API_BASE = "https://aivideoapp-kzp6.onrender.com";
 class AiVantuApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
