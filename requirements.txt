@@ -21,10 +21,10 @@ numpy==1.26.4
 # ==== Payment Gateways ====
 razorpay==1.4.2
 paypalrestsdk==1.13.1
-stripe==10.10.0
+stripe==10.10.0   # optional future
 
 # ==== OTP / SMS ====
-twilio==8.0.0
+twilio==8.0.0     # optional future
 
 # ==== Firebase ====
 firebase-admin==6.6.0
