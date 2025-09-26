@@ -6,8 +6,10 @@ flask-sqlalchemy==3.1.1
 flask-jwt-extended==4.6.0
 Flask-Migrate==4.0.5
 
-# Database (PostgreSQL)
-psycopg2-binary==2.9.9
+# Database (SQLite / PostgreSQL)
+# psycopg2-binary hata diya (Python 3.13 issue)
+# Agar PostgreSQL use karna ho to niche wala rakho
+psycopg[binary]
 
 # Firebase (auth + storage)
 firebase-admin==6.6.0
@@ -32,6 +34,7 @@ click==8.1.7
 moviepy==1.0.3
 gTTS==2.5.1
 opencv-python-headless==4.10.0.84
+Pillow==10.3.0
 
 # Utils
 python-dotenv==1.0.1
