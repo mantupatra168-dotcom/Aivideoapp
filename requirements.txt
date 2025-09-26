@@ -7,10 +7,8 @@ flask-limiter==3.8.0
 flask-jwt-extended==4.6.0
 flask-migrate==4.0.5
 
-# ==== Database (SQLite by default, Postgres optional) ====
+# ==== Database (SQLite only) ====
 SQLAlchemy==2.0.36
-# Uncomment agar Postgres use karna ho
-# psycopg2-binary==2.9.9
 
 # ==== Video / Audio Processing ====
 moviepy==1.0.3
@@ -18,12 +16,12 @@ gTTS==2.5.1
 Pillow==10.4.0
 opencv-python-headless==4.10.0.84
 pydub==0.25.1
-numpy==1.26.4   # moviepy ke liye zaruri
+numpy==1.26.4
 
 # ==== Payment Gateways ====
 razorpay==1.4.2
 paypalrestsdk==1.13.1
-stripe==10.0.0   # extra option
+stripe==10.10.0
 
 # ==== OTP / SMS ====
 twilio==8.0.0
@@ -39,5 +37,4 @@ rq==1.15.1
 requests==2.32.3
 python-dotenv==1.0.1
 gunicorn==23.0.0
-setuptools==65.5.0
 loguru==0.7.2
