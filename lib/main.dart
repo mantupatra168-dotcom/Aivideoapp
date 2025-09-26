@@ -1,472 +1,66 @@
-// main.dart
-import 'dart:convert';
-import 'dart:io';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'package:image_picker/image_picker.dart';
-import 'package:speech_to_text/speech_to_text.dart' as stt;
-import 'package:flutter_tts/flutter_tts.dart';
-import 'package:razorpay_flutter/razorpay_flutter.dart';
-import 'package:url_launcher/url_launcher.dart';
+// Flutter single-file production-ready front-end (main.dart) // Usage instructions (Hindi): // 1) Put this file as lib/main.dart in a new Flutter project (Flutter 3.x+). // 2) Add following packages in pubspec.yaml under dependencies: //    http: ^0.13.5 //    flutter_dotenv: ^5.0.2 //    image_picker: ^0.8.7+4 //    file_picker: ^5.2.5 //    video_player: ^2.5.1 //    chewie: ^1.5.2 //    audioplayers: ^2.1.1 //    url_launcher: ^6.1.7 //    provider: ^6.0.5 //    fluttertoast: ^8.2.1 // 3) Create a .env file in project root with: //    API_BASE_URL=https://your-backend.example.com  # backend base URL //    PAYPAL_CLIENT_ID=... //    RAZORPAY_KEY_ID=... // 4) Run flutter pub get and then flutter run. // 5) This app assumes the backend exposes endpoints described in the backend (upload, preview_voice, generate_video, gallery, create_paypal_order, create_razorpay_order, verify_razorpay_payment, assistant).
 
-/// ---------------- CONFIG ----------------
-/// Put real values in environment/config — DO NOT commit secrets to repo.
-const String API_BASE = "https://your-backend.example.com"; // <- change to your backend URL (Render)
-const String RAZORPAY_KEY = "rzp_test_xxx"; // <- set in secure config
+import 'dart:convert'; import 'dart:io'; import 'package:flutter/material.dart'; import 'package:flutter_dotenv/flutter_dotenv.dart'; import 'package:http/http.dart' as http; import 'package:image_picker/image_picker.dart'; import 'package:file_picker/file_picker.dart'; import 'package:provider/provider.dart'; import 'package:video_player/video_player.dart'; import 'package:chewie/chewie.dart'; import 'package:audioplayers/audioplayers.dart'; import 'package:fluttertoast/fluttertoast.dart'; import 'package:url_launcher/url_launcher.dart';
 
-/// -----------------------------------------
+void main() async { WidgetsFlutterBinding.ensureInitialized(); await dotenv.load(); runApp(MyApp()); }
 
-void main() {
-  runApp(const AiVantuApp());
-}
+class Config { static final apiBase = dotenv.env['API_BASE_URL'] ?? 'https://example.com'; }
 
-class AiVantuApp extends StatelessWidget {
-  const AiVantuApp({super.key});
+class AppState extends ChangeNotifier { List<Map<String, dynamic>> gallery = []; bool loading = false;
 
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'AiVantu',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        primarySwatch: Colors.deepPurple,
-        useMaterial3: true,
-      ),
-      home: const HomeScreen(),
-    );
-  }
-}
+void setLoading(bool v) { loading = v; notifyListeners(); } void setGallery(List<Map<String, dynamic>> g) { gallery = g; notifyListeners(); } }
 
-class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
-  @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
+class MyApp extends StatelessWidget { @override Widget build(BuildContext context) { return ChangeNotifierProvider( create: (_) => AppState(), child: MaterialApp( debugShowCheckedModeBanner: false, title: 'AiVantu Frontend', theme: ThemeData.dark().copyWith( colorScheme: ColorScheme.dark(primary: Colors.teal), scaffoldBackgroundColor: Color(0xFF0D0F14), ), home: HomePage(), ), ); } }
 
-class _HomeScreenState extends State<HomeScreen> {
-  // Core
-  final ImagePicker _picker = ImagePicker();
-  File? _pickedImage;
-  bool _uploading = false;
-  String _script = "";
-  String _lang = "hi"; // user can set language for TTS generation (hi/en/ta/bn etc.)
+class HomePage extends StatefulWidget { @override _HomePageState createState() => _HomePageState(); }
 
-  // Speech -> text
-  late stt.SpeechToText _speech;
-  bool _isListening = false;
-  String _spokenText = "";
+class _HomePageState extends State<HomePage> { int _index = 0; final _pages = [HomeScreen(), ExploreScreen(), CreateScreen(), AssetsScreen(), ProfileScreen()];
 
-  // TTS
-  final FlutterTts _tts = FlutterTts();
+@override Widget build(BuildContext context) { return Scaffold( body: _pages[_index], bottomNavigationBar: BottomNavigationBar( currentIndex: _index, onTap: (i) => setState(() => _index = i), items: [ BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'), BottomNavigationBarItem(icon: Icon(Icons.explore), label: 'Explore'), BottomNavigationBarItem(icon: Icon(Icons.add_circle_outline), label: 'Create'), BottomNavigationBarItem(icon: Icon(Icons.folder), label: 'Assets'), BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'), ], ), ); } }
 
-  // Razorpay
-  late Razorpay _razorpay;
+// ---------- Home Screen ---------- class HomeScreen extends StatelessWidget { @override Widget build(BuildContext context) { return SafeArea( child: SingleChildScrollView( padding: EdgeInsets.all(16), child: Column( crossAxisAlignment: CrossAxisAlignment.start, children: [ Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [ IconButton(icon: Icon(Icons.menu), onPressed: () => Scaffold.of(context).openDrawer()), Row(children: [ ElevatedButton.icon(onPressed: () => openUpgrade(context), icon: Icon(Icons.card_giftcard), label: Text('Referral Bonus')), SizedBox(width:8), OutlinedButton(onPressed: () => openUpgrade(context), child: Text('Upgrade')) ]) ]), SizedBox(height:12), Container( height:160, decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), color: Colors.grey[850]), child: Stack(children:[ Positioned.fill(child: ClipRRect(borderRadius: BorderRadius.circular(12), child: Image.asset('assets/banner.jpg', fit: BoxFit.cover))), Positioned(left:16, bottom:16, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children:[ Text('Kling Shorts Contest #9', style: TextStyle(fontSize:18, fontWeight: FontWeight.bold, color: Colors.white)), Text('Design Sci-Fi Creatures with Kling AI!', style: TextStyle(color:Colors.white70)) ])) ]) ), SizedBox(height:16), Row(children:[ Expanded(child: ElevatedButton.icon(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: () => CreateScreen(initialTab: 0))), icon: Icon(Icons.image), label: Text('Image Generation'))), SizedBox(width:12), Expanded(child: ElevatedButton.icon(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: () => CreateScreen(initialTab: 1))), icon: Icon(Icons.video_library), label: Text('Video generation'))), ]), SizedBox(height:16), Text('Effects', style: TextStyle(fontSize:18, fontWeight: FontWeight.bold)), SizedBox(height:12), SizedBox( height:160, child: ListView(scrollDirection: Axis.horizontal, children: [ _effectCard('Guardian Spirit','assets/e1.jpg'), _effectCard('Earth Zoom In','assets/e2.jpg'), _effectCard('Inner Voice','assets/e3.jpg'), ]), ), SizedBox(height:20), Text('For You', style: TextStyle(fontSize:18, fontWeight: FontWeight.bold)), SizedBox(height:10), // small demo gallery Consumer<AppState>(builder:(context, st, _){ if (st.gallery.isEmpty) return Text('No videos yet', style: TextStyle(color:Colors.white54)); return Column(children: st.gallery.map((g)=>ListTile( leading: Icon(Icons.video_library), title: Text(g['title'] ?? 'Untitled'), subtitle: Text(g['status'] ?? 'ready'), trailing: IconButton(icon: Icon(Icons.play_arrow), onPressed: ()=>_openVideoPreview(context, g)), )).toList()); }) ], ), ), ); }
 
-  // UI state
-  bool _generating = false;
-  String? _lastVideoUrl;
-  List<String> _gallery = [];
+Widget _effectCard(String title, String asset){ return Container(width:140, margin: EdgeInsets.only(right:12), child: Column(children:[ Expanded(child: ClipRRect(borderRadius: BorderRadius.circular(12), child: Image.asset(asset, fit: BoxFit.cover))), SizedBox(height:6), Text(title, style: TextStyle(fontSize:14)) ])); }
 
-  @override
-  void initState() {
-    super.initState();
-    _speech = stt.SpeechToText();
-    _initTts();
-    _initRazorpay();
-    _loadGallery();
-  }
+void openUpgrade(BuildContext ctx){ Navigator.push(ctx, MaterialPageRoute(builder:()=>UpgradePage())); }
 
-  Future<void> _initTts() async {
-    await _tts.setLanguage("en-IN");
-    await _tts.setSpeechRate(0.9);
-    await _tts.setPitch(1.0);
-  }
+void openVideoPreview(BuildContext ctx, Map<String,dynamic> g){ Navigator.push(ctx, MaterialPageRoute(builder:()=>VideoPreviewPage(videoData: g))); } }
 
-  void _initRazorpay() {
-    _razorpay = Razorpay();
-    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handleRazorpaySuccess);
-    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handleRazorpayError);
-    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, (_) {});
-  }
+// ---------- Explore, Assets, Profile placeholders ---------- class ExploreScreen extends StatelessWidget { @override Widget build(BuildContext c) => Center(child: Text('Explore', style: TextStyle(fontSize:24))); } class AssetsScreen extends StatelessWidget { @override Widget build(BuildContext c) => Center(child: Text('Assets', style: TextStyle(fontSize:24))); }
 
-  @override
-  void dispose() {
-    _razorpay.clear();
-    _tts.stop();
-    super.dispose();
-  }
+class ProfileScreen extends StatelessWidget { @override Widget build(BuildContext context) { return Scaffold( drawer: Drawer(child: _drawerContent(context)), appBar: AppBar(title: Text('Profile')), body: Center(child: Text('User Profile')), ); }
 
-  Future<void> _loadGallery() async {
-    try {
-      final res = await http.get(Uri.parse("$API_BASE/gallery"));
-      if (res.statusCode == 200) {
-        final List<dynamic> list = jsonDecode(res.body)['videos'] ?? [];
-        setState(() {
-          _gallery = list.map((e) => e.toString()).toList();
-        });
-      }
-    } catch (e) {
-      // ignore - offline friendly
-    }
-  }
+Widget drawerContent(BuildContext ctx){ return ListView(padding:EdgeInsets.zero, children:[ DrawerHeader(child:Column(crossAxisAlignment: CrossAxisAlignment.start, children:[ CircleAvatar(radius:28, child: Icon(Icons.person)), SizedBox(height:8), Text('kpNNShRE', style: TextStyle(fontSize:18)), Text('ID 39103605') ])), ListTile(leading:Icon(Icons.credit_card), title:Text('Credits Details'), trailing:Text('166.00')), ListTile(leading:Icon(Icons.upgrade), title:Text('Upgrade your plan'), onTap: ()=>Navigator.push(ctx, MaterialPageRoute(builder:()=>UpgradePage()))), ListTile(leading:Icon(Icons.message), title:Text('Messages'), trailing:CircleAvatar(radius:10, child:Text('9', style:TextStyle(fontSize:12)))), ListTile(leading:Icon(Icons.help), title:Text('Help Center')), ListTile(leading:Icon(Icons.logout), title:Text('Sign out'), onTap: ()=>Fluttertoast.showToast(msg:'Signed out (demo)')) ]); } }
 
-  // --------------- Speech ---------------
-  Future<void> _toggleListening() async {
-    if (!_isListening) {
-      bool available = await _speech.initialize(onStatus: (s) {
-        // debug
-      }, onError: (e) {
-        _tts.speak("Speech recognition error");
-      });
-      if (available) {
-        setState(() {
-          _isListening = true;
-        });
-        _speech.listen(onResult: (val) {
-          setState(() {
-            _spokenText = val.recognizedWords;
-            _script = _spokenText;
-          });
-        }, localeId: _lang == "hi" ? "hi_IN" : null, listenMode: stt.ListenMode.confirmation);
-      } else {
-        _tts.speak("Speech recognition not available on this device");
-      }
-    } else {
-      _speech.stop();
-      setState(() {
-        _isListening = false;
-      });
-    }
-  }
+// ---------- Create Screen: tabs for Image/Video, includes photo+voice upload ---------- class CreateScreen extends StatefulWidget { final int initialTab; CreateScreen({this.initialTab = 1}); @override _CreateScreenState createState() => _CreateScreenState(); }
 
-  // --------------- Image Picker ---------------
-  Future<void> _pickImage() async {
-    final XFile? picked = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
-    if (picked != null) {
-      setState(() {
-        _pickedImage = File(picked.path);
-      });
-    }
-  }
+class _CreateScreenState extends State<CreateScreen> { int tab = 1; // 0 image, 1 video File? pickedImage; File? pickedVoice; TextEditingController scriptCtrl = TextEditingController(); bool generating = false; String? generatedVideoUrl;
 
-  // --------------- Upload helper ---------------
-  Future<String?> _uploadFile(File file, String kind) async {
-    try {
-      final uri = Uri.parse("$API_BASE/upload");
-      final request = http.MultipartRequest('POST', uri);
-      request.fields['kind'] = kind;
-      request.files.add(await http.MultipartFile.fromPath('file', file.path, filename: file.path.split("/").last));
-      final streamed = await request.send();
-      final resp = await http.Response.fromStream(streamed);
-      if (resp.statusCode == 200) {
-        final body = jsonDecode(resp.body);
-        return body['saved'] as String?;
-      } else {
-        final body = resp.body;
-        throw Exception("Upload failed: ${resp.statusCode} ${body}");
-      }
-    } catch (e) {
-      rethrow;
-    }
-  }
+@override void initState(){ super.initState(); tab = widget.initialTab; }
 
-  // --------------- Generate Video ---------------
-  Future<void> _generateVideo() async {
-    if (_generating) return;
-    if (_script.trim().isEmpty && _pickedImage == null) {
-      _tts.speak("Please provide script or a character image first");
-      return;
-    }
-    setState(() {
-      _generating = true;
-    });
+@override Widget build(BuildContext ctx){ return Scaffold( appBar: AppBar(title: Text(tab==0? 'Create Image' : 'Create Video')), body: SingleChildScrollView(padding: EdgeInsets.all(12), child: Column(children:[ ToggleButtons(children:[Padding(padding:EdgeInsets.symmetric(horizontal:16),child:Text('Image')),Padding(padding:EdgeInsets.symmetric(horizontal:16),child:Text('Video'))], isSelected:[tab==0, tab==1], onPressed:(i)=>setState(()=>tab=i)), SizedBox(height:12), _filePickerTile('Upload Photo', Icons.photo, () async => await _pickImage()), SizedBox(height:8), _filePickerTile('Upload Voice (optional)', Icons.mic, () async => await _pickVoice()), SizedBox(height:12), TextField(controller: scriptCtrl, maxLines:6, decoration: InputDecoration(hintText:'Enter script (you can mark [C1]:, [C2]: for characters)', border: OutlineInputBorder())), SizedBox(height:12), Row(children:[Expanded(child: ElevatedButton(onPressed: generating?null: _onGenerate, child: generating?CircularProgressIndicator(color:Colors.white):Text('Generate')))]), SizedBox(height:12), if (generatedVideoUrl != null) ...[ Text('Generated video', style: TextStyle(fontWeight: FontWeight.bold)), VideoPlayerWidget(url: generatedVideoUrl!) ] ])), ); }
 
-    try {
-      // Upload image first (if any)
-      List<String> imageRel = [];
-      if (_pickedImage != null) {
-        final saved = await _uploadFile(_pickedImage!, "characters");
-        if (saved != null) imageRel.add(saved);
-      }
+Widget _filePickerTile(String label, IconData icon, VoidCallback onTap){ String sub = (label=='Upload Photo' && pickedImage!=null) ? pickedImage!.path.split('/').last : (label=='Upload Voice (optional)' && pickedVoice!=null) ? pickedVoice!.path.split('/').last : ''; return ListTile(leading:Icon(icon), title:Text(label), subtitle: sub.isNotEmpty?Text(sub):null, trailing: IconButton(icon: Icon(Icons.upload_file), onPressed: onTap)); }
 
-      // Create request to backend generate_video endpoint
-      final uri = Uri.parse("$API_BASE/generate_video");
-      final request = http.MultipartRequest('POST', uri);
-      request.fields['user_email'] = "demo@aivantu.com";
-      request.fields['title'] = "Mobile Video ${DateTime.now().millisecondsSinceEpoch}";
-      request.fields['script'] = _script;
-      request.fields['template'] = "Default";
-      request.fields['quality'] = "HD";
-      request.fields['lang'] = _lang;
-      // If we uploaded images we already sent to uploads/ via /upload; but the backend generate_video accepts files as well.
-      // For simplicity, attach picked image again as characters (some backends expect direct files).
-      if (_pickedImage != null) {
-        request.files.add(await http.MultipartFile.fromPath('characters', _pickedImage!.path));
-      }
+Future<void> _pickImage() async{ final picker = ImagePicker(); final XFile? img = await picker.pickImage(source: ImageSource.gallery, maxWidth:1280); if (img==null) return; setState(()=> pickedImage = File(img.path)); Fluttertoast.showToast(msg: 'Image selected'); }
 
-      final streamed = await request.send();
-      final resp = await http.Response.fromStream(streamed);
-      if (resp.statusCode == 200) {
-        final j = jsonDecode(resp.body);
-        if (j['status'] == 'done') {
-          final url = j['download_url'] as String?;
-          setState(() {
-            _lastVideoUrl = url;
-          });
-          _tts.speak("Video ready. Opening gallery.");
-          _loadGallery();
-          if (url != null && await canLaunchUrl(Uri.parse(url))) {
-            await launchUrl(Uri.parse(url));
-          }
-        } else {
-          // For synchronous generate endpoint it might return status 'rendering' or job id
-          _tts.speak("Render started. you will be notified when ready.");
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Render started...")));
-        }
-      } else {
-        final j = resp.body;
-        _tts.speak("Video generation failed");
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error ${resp.statusCode}: $j")));
-      }
-    } catch (e) {
-      _tts.speak("Error while generating video");
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Exception: $e")));
-    } finally {
-      setState(() {
-        _generating = false;
-      });
-    }
-  }
+Future<void> _pickVoice() async{ FilePickerResult? res = await FilePicker.platform.pickFiles(type: FileType.audio); if (res==null) return; setState(()=> pickedVoice = File(res.files.single.path!)); Fluttertoast.showToast(msg: 'Voice selected'); }
 
-  // --------------- Payments ---------------
-  void _startRazorpayPayment({required int amountInPaise, required String orderId}) {
-    var options = {
-      'key': RAZORPAY_KEY,
-      'amount': amountInPaise, // in paise
-      'name': 'AiVantu',
-      'description': 'Credits purchase',
-      'order_id': orderId, // optionally create order on backend and pass id
-      'prefill': {'contact': '', 'email': 'demo@aivantu.com'},
-      'theme': {'color': '#6A1B9A'}
-    };
+Future<void> onGenerate() async{ // Validate if (tab==1 && scriptCtrl.text.trim().isEmpty){ Fluttertoast.showToast(msg:'Script required for video'); return; } setState(()=> generating=true); try{ var uri = Uri.parse('${Config.apiBase}/generate_video'); var req = http.MultipartRequest('POST', uri); req.fields['user_email'] = 'demo@aivantu.com'; req.fields['title'] = 'MobileGen${DateTime.now().toIso8601String()}'; req.fields['script'] = scriptCtrl.text; req.fields['template'] = 'Cinematic'; // add files if (pickedImage!=null){ req.files.add(await http.MultipartFile.fromPath('characters', pickedImage!.path)); } if (pickedVoice!=null){ req.files.add(await http.MultipartFile.fromPath('character_voice_files', pickedVoice!.path)); } // send var streamed = await req.send(); var resp = await http.Response.fromStream(streamed); if (resp.statusCode>=200 && resp.statusCode<300){ var j = json.decode(resp.body); // backend returns download_url or outputs path String url = j['download_url'] ?? j['video_url'] ?? j['file_path'] ?? ''; if (url.isEmpty){ Fluttertoast.showToast(msg:'Generated but no url returned'); } else { setState(()=> generatedVideoUrl = url); Fluttertoast.showToast(msg:'Generated'); } // refresh gallery await _refreshGallery(); } else { Fluttertoast.showToast(msg:'Generation failed: ${resp.statusCode}'); } } catch(e){ Fluttertoast.showToast(msg:'Error: $e'); } setState(()=> generating=false); }
 
-    try {
-      _razorpay.open(options);
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Razorpay open error: $e")));
-    }
-  }
+Future<void> _refreshGallery() async{ try{ var r = await http.get(Uri.parse('${Config.apiBase}/admin/status'));// example, change to /gallery if (r.statusCode==200){ // NOT actual gallery format - call /gallery in backend // using /gallery demo var gr = await http.get(Uri.parse('${Config.apiBase}/gallery/demo@aivantu.com')); if (gr.statusCode==200){ var list = json.decode(gr.body) as List; Provider.of<AppState>(context, listen:false).setGallery(List<Map<String,dynamic>>.from(list)); } } }catch(e){ } } }
 
-  void _handleRazorpaySuccess(PaymentSuccessResponse response) {
-    _tts.speak("Payment successful");
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Payment success")));
-    // inform backend to verify signature & capture
-  }
+// ---------- Video Preview Page ---------- class VideoPreviewPage extends StatefulWidget { final Map<String,dynamic> videoData; VideoPreviewPage({required this.videoData}); @override _VideoPreviewPageState createState()=> _VideoPreviewPageState(); } class _VideoPreviewPageState extends State<VideoPreviewPage>{ VideoPlayerController? _controller; ChewieController? _chewie; @override void initState(){ super.initState(); _init(); } void _init(){ String url = widget.videoData['download_url'] ?? widget.videoData['file'] ?? widget.videoData['file_path'] ?? ''; if (url.isNotEmpty){ controller = VideoPlayerController.network(url)..initialize().then((){ setState(()=> _chewie = ChewieController(videoPlayerController: _controller!, autoPlay:false, looping:false)); }); }} @override void dispose(){ _chewie?.dispose(); _controller?.dispose(); super.dispose(); } @override Widget build(BuildContext c){ return Scaffold(appBar: AppBar(title: Text(widget.videoData['title'] ?? 'Preview')), body: _chewie==null?Center(child:CircularProgressIndicator()):Chewie(controller: _chewie!)); } }
 
-  void _handleRazorpayError(PaymentFailureResponse response) {
-    _tts.speak("Payment failed");
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Payment failed")));
-  }
+// ---------- Video Player Widget for generated URL ---------- class VideoPlayerWidget extends StatefulWidget { final String url; VideoPlayerWidget({required this.url}); @override _VideoPlayerWidgetState createState()=> _VideoPlayerWidgetState(); } class _VideoPlayerWidgetState extends State<VideoPlayerWidget>{ VideoPlayerController? _ctrl; ChewieController? _chewie; @override void initState(){ super.initState(); ctrl = VideoPlayerController.network(widget.url)..initialize().then((){ setState(()=> _chewie = ChewieController(videoPlayerController: _ctrl!, autoPlay:false)); }); } @override void dispose(){ _chewie?.dispose(); _ctrl?.dispose(); super.dispose(); } @override Widget build(BuildContext c) => _chewie==null?Container(height:200, child:Center(child:CircularProgressIndicator())):Chewie(controller:_chewie!); }
 
-  // PayPal flow (frontend) - typically backend should create order and return approval_url
-  Future<void> _startPaypalPayment() async {
-    try {
-      // backend returns approval url e.g. { "approval_url": "https://www.sandbox.paypal.com/..." }
-      final res = await http.post(Uri.parse("$API_BASE/create_paypal_order"), headers: {
-        "Content-Type": "application/json"
-      }, body: jsonEncode({"amount": "499.00", "currency": "INR", "intent": "CAPTURE"}));
-      if (res.statusCode == 200) {
-        final j = jsonDecode(res.body);
-        final url = j['approval_url'] as String?;
-        if (url != null && await canLaunchUrl(Uri.parse(url))) {
-          await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("No approval url returned")));
-        }
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("PayPal create order failed: ${res.body}")));
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Paypal error: $e")));
-    }
-  }
+// ---------- Upgrade / Payment placeholders ---------- class UpgradePage extends StatelessWidget { @override Widget build(BuildContext c){ return Scaffold(appBar: AppBar(title: Text('Upgrade')), body: Padding(padding:EdgeInsets.all(16), child: Column(children:[ ListTile(title:Text('Premium'), subtitle:Text('₹499 - FullHD, 10 renders/day'), trailing: ElevatedButton(onPressed: ()=>_startRazor(c, 499), child: Text('Buy'))), ListTile(title:Text('Pro'), subtitle:Text('₹999 - 4K, unlimited'), trailing: ElevatedButton(onPressed: ()=>_startRazor(c, 999), child: Text('Buy'))), SizedBox(height:20), Text('PayPal / Razorpay flows will open web checkout using backend endpoints') ]))); }
 
-  // --------------- UI ---------------
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('AiVantu — Video Studio'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () {
-              _loadGallery();
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.headset_mic),
-            onPressed: () {
-              _tts.speak("Hello! Tap Speak to record your script in Hindi or English.");
-            },
-          ),
-        ],
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _sectionTitle("Voice Assistant (speech -> script)"),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      minLines: 2,
-                      maxLines: 6,
-                      decoration: const InputDecoration(
-                        labelText: "Script (will be used for TTS)",
-                        border: OutlineInputBorder(),
-                      ),
-                      controller: TextEditingController(text: _script),
-                      onChanged: (v) => _script = v,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton.icon(
-                    onPressed: _toggleListening,
-                    icon: Icon(_isListening ? Icons.mic : Icons.mic_none),
-                    label: Text(_isListening ? "Listening..." : "Speak"),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(children: [
-                const Text("Language for TTS: "),
-                const SizedBox(width: 8),
-                DropdownButton<String>(
-                  value: _lang,
-                  items: const [
-                    DropdownMenuItem(value: "hi", child: Text("Hindi (hi)")),
-                    DropdownMenuItem(value: "en", child: Text("English (en)")),
-                    DropdownMenuItem(value: "bn", child: Text("Bengali (bn)")),
-                    DropdownMenuItem(value: "ta", child: Text("Tamil (ta)")),
-                  ],
-                  onChanged: (v) {
-                    if (v != null) setState(() => _lang = v);
-                  },
-                )
-              ]),
-              const SizedBox(height: 18),
-              _sectionTitle("Character (image)"),
-              if (_pickedImage != null)
-                SizedBox(
-                  height: 180,
-                  child: Image.file(_pickedImage!, fit: BoxFit.cover),
-                )
-              else
-                Container(
-                  height: 140,
-                  color: Colors.grey.shade200,
-                  child: const Center(child: Text("No character image selected")),
-                ),
-              const SizedBox(height: 8),
-              Row(children: [
-                ElevatedButton.icon(
-                  onPressed: _pickImage,
-                  icon: const Icon(Icons.photo),
-                  label: const Text("Pick Image"),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton.icon(
-                  onPressed: () async {
-                    // Upload and generate
-                    if (_pickedImage == null && _script.trim().isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Add image or script first")));
-                      return;
-                    }
-                    await _generateVideo();
-                  },
-                  icon: const Icon(Icons.movie),
-                  label: _generating ? const Text("Generating...") : const Text("Generate Video"),
-                ),
-              ]),
-              const SizedBox(height: 20),
-              _sectionTitle("Payments"),
-              Wrap(spacing: 12, children: [
-                ElevatedButton(
-                  onPressed: () {
-                    // Example: create order on backend and call razorpay
-                    // For demo we call backend to create order id & amount
-                    _createOrderAndPay();
-                  },
-                  child: const Text("Buy Credits (Razorpay)"),
-                ),
-                ElevatedButton(
-                  onPressed: _startPaypalPayment,
-                  child: const Text("Buy Credits (PayPal)"),
-                ),
-              ]),
-              const SizedBox(height: 20),
-              _sectionTitle("Gallery"),
-              _gallery.isEmpty
-                  ? const Text("No videos yet")
-                  : Column(
-                      children: _gallery.map((url) {
-                        return ListTile(
-                          leading: const Icon(Icons.videocam),
-                          title: Text(url.split("/").last),
-                          subtitle: Text(url),
-                          onTap: () async {
-                            final uri = Uri.parse(url);
-                            if (await canLaunchUrl(uri)) await launchUrl(uri);
-                          },
-                        );
-                      }).toList(),
-                    ),
-              const SizedBox(height: 30),
-              Text("Last video: ${_lastVideoUrl ?? "none"}", style: const TextStyle(fontSize: 12, color: Colors.grey)),
-              const SizedBox(height: 40),
-              const Text("NOTE:", style: TextStyle(fontWeight: FontWeight.bold)),
-              const Text(
-                "1) Set API_BASE at top to your backend URL. "
-                "2) Razorpay requires order_id creation on backend for production (capture/verify). "
-                "3) PayPal flow requires server-side integration (create order, return approval_url).",
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+void _startRazor(BuildContext ctx, double amount){ Fluttertoast.showToast(msg:'Starting Razorpay for ₹$amount - open web checkout (placeholder)'); } }
 
-  Widget _sectionTitle(String t) => Padding(
-        padding: const EdgeInsets.only(bottom: 8.0),
-        child: Text(t, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-      );
+// ---------- Assistant chat (simple) ---------- class AssistantPage extends StatefulWidget { @override _AssistantPageState createState()=>_AssistantPageState(); } class _AssistantPageState extends State<AssistantPage>{ TextEditingController q = TextEditingController(); String? audioUrl; String? reply; @override Widget build(BuildContext c){ return Scaffold(appBar: AppBar(title:Text('Assistant')), body: Column(children:[ Expanded(child: reply==null?Center(child:Text('Ask for script help')):Padding(padding:EdgeInsets.all(12),child:Text(reply!))), if (audioUrl!=null) IconButton(icon:Icon(Icons.play_arrow), onPressed: ()=>AudioPlayer().play(UrlSource(audioUrl!))), Padding(padding:EdgeInsets.all(8), child:Row(children:[Expanded(child:TextField(controller:q)), IconButton(icon:Icon(Icons.send), onPressed:_ask)])) ])); } Future<void> _ask() async{ var res = await http.post(Uri.parse('${Config.apiBase}/assistant'), headers:{'Content-Type':'application/json'}, body:json.encode({'query':q.text,'lang':'hi'})); if (res.statusCode==200){ var j=json.decode(res.body); setState(()=> reply=j['reply'] ?? ''); audioUrl = j['audio_url']; } else Fluttertoast.showToast(msg:'Assistant failed'); } }
 
-  // Ask backend to create a Razorpay order, then open the checkout
-  Future<void> _createOrderAndPay() async {
-    try {
-      final res = await http.post(Uri.parse("$API_BASE/create_razorpay_order"),
-          headers: {"Content-Type": "application/json"},
-          body: jsonEncode({"amount": 49900 /* amount in paise e.g. 499.00 INR */}));
-      if (res.statusCode == 200) {
-        final j = jsonDecode(res.body);
-        final orderId = j['order_id'] as String?;
-        final amount = j['amount'] as int? ?? 49900;
-        if (orderId != null) {
-          _startRazorpayPayment(amountInPaise: amount, orderId: orderId);
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Order creation failed")));
-        }
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Order API error: ${res.body}")));
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Create order error: $e")));
-    }
-  }
-}
+// ---------- Misc Helpers ---------- void openUrl(String url) async{ if (await canLaunch(url)) await launch(url); }
+
+// End of file
+
