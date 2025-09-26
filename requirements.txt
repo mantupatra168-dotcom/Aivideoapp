@@ -1,0 +1,40 @@
+# Core Flask
+flask==3.0.3
+flask-mail==0.9.1
+flask-limiter==3.8.0
+flask-sqlalchemy==3.1.1
+flask-jwt-extended==4.6.0
+Flask-Migrate==4.0.5
+
+# Database (PostgreSQL)
+psycopg2-binary==2.9.9
+
+# Firebase (auth + storage)
+firebase-admin==6.6.0
+
+# OTP / SMS (optional)
+twilio==8.0.0
+
+# Redis Queue (for async tasks)
+redis==5.0.1
+rq==1.15.1
+
+# Payment Gateways
+razorpay==1.4.2
+paypalrestsdk==1.13.1
+
+# Frontend / Templates
+jinja2==3.1.2
+itsdangerous==2.2.0
+click==8.1.7
+
+# Video/Audio Processing (Phase 3 – Real rendering)
+moviepy==1.0.3
+gTTS==2.5.1
+opencv-python-headless==4.10.0.84
+
+# Utils
+python-dotenv==1.0.1
+gunicorn==23.0.0
+werkzeug==3.0.4
+setuptools==65.5.0
