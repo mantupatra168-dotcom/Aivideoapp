@@ -78,14 +78,9 @@ try:
 except Exception:
     log.warning("gTTS not available - preview and TTS endpoints will fail")
     GTTS_AVAILABLE = False
-
-# psycopg2 can cause binary build issues on some hosts; keep optional
-try:
-    import psycopg2  # pragma: no cover
-    PSYCOPG2_AVAILABLE = True
-except Exception:
-    PSYCOPG2_AVAILABLE = False
-
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
 # ---------- DB Models ----------
 class UserProfile(db.Model):
     id = db.Column(db.Integer, primary_key=True)
