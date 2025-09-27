@@ -1,0 +1,35 @@
+name: Deploy Backend + Frontend to Render
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v3
+
+    # 🔹 Backend Deploy
+    - name: Deploy Backend to Render
+      run: |
+        echo "Deploying backend..."
+        curl -X POST "$RENDER_BACKEND_DEPLOY_HOOK"
+
+    # 🔹 Flutter Setup
+    - name: Install Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.24.0'
+
+    # 🔹 Build Flutter Web
+    - name: Build Frontend
+      run: flutter build web
+
+    # 🔹 Deploy Frontend to Render
+    - name: Deploy Frontend to Render
+      run: |
+        echo "Deploying frontend..."
+        curl -X POST "$RENDER_FRONTEND_DEPLOY_HOOK"
