@@ -1,19 +1,15 @@
 services:
-  # Backend Service
   - type: web
-    name: ai-video-backend
+    name: aivideoapp-backend
     env: python
-    buildCommand: ""
-    startCommand: gunicorn app:app
     plan: free
-    envVars:
-      - key: PYTHON_VERSION
-        value: 3.10
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn app:app"
+    autoDeploy: true
 
-  # Frontend Service (Flutter Web)
   - type: web
-    name: ai-video-frontend
+    name: aivideoapp-frontend
     env: static
-    buildCommand: flutter build web
-    staticPublishPath: build/web
-    plan: free
+    buildCommand: "flutter build web"
+    staticPublishPath: "build/web"
+    autoDeploy: true
