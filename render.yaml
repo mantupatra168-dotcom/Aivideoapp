@@ -1,6 +1,6 @@
 services:
-  - type: web
-    name: aivideoapp-backend
-    env: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app
+  - type: static
+    name: aivideo-frontend
+    rootDir: frontend
+    buildCommand: ""
+    staticPublishPath: .
